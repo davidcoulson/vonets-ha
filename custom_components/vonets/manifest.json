@@ -1,7 +1,7 @@
 {
   "domain": "vonets",
   "name": "VONETS WiFi Bridge",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "config_flow": true,
   "documentation": "https://github.com/davidcoulson/vonets-ha",
   "iot_class": "local_polling",

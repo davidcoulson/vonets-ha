@@ -9,6 +9,7 @@ class VonetsEntity(CoordinatorEntity[VonetsCoordinator]):
 
     def __init__(self, coordinator: VonetsCoordinator, key: str) -> None:
         super().__init__(coordinator)
+        self._key = key
         entry_id = coordinator.config_entry.entry_id
         self._attr_unique_id = f"{entry_id}_{key}"
         self._attr_device_info = DeviceInfo(
