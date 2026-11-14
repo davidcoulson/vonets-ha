@@ -33,4 +33,4 @@ class VonetsSensor(VonetsEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data.get(self._key)
+        return self.coordinator.data.get(self._key)  # None (unknown) if the bridge login failed

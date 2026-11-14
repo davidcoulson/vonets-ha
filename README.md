@@ -1,7 +1,9 @@
 # VONETS WiFi Bridge for Home Assistant
 
 Monitors VONETS WiFi bridges (tested on the VBG1200) through the status endpoints the bridge
-serves without a login. Set up from the UI with just the bridge's IP address.
+serves (the uplink check is open; signal and status need the web login). Set up from the UI with just the bridge's IP address.
+
+Setup asks for the bridge IP and its web admin login (the signal and status data need it; the uplink check does not).
 
 Entities per bridge: uplink connectivity, signal (dBm and %), temperature, uptime, channel,
 connected AP (BSSID) and SSID. Polls every 60 seconds.

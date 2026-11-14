@@ -2,11 +2,11 @@
 import aiohttp
 import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from . import DOMAIN
-from .api import fetch
+from .api import VonetsClient
 
 
 class VonetsConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -19,9 +19,16 @@ class VonetsConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(host)  # shortcut: keyed on IP, so give each bridge a DHCP reservation
             self._abort_if_unique_id_configured()
             try:
-                await fetch(async_get_clientsession(self.hass), host)
+                data = await VonetsClient(
+                    async_create_clientsession(self.hass, cookie_jar=aiohttp.CookieJar(unsafe=True)),
+                    host, user_input.get(CONF_USERNAME, ""), user_input.get(CONF_PASSWORD, "")).fetch()
             except (aiohttp.ClientError, TimeoutError):
                 errors["base"] = "cannot_connect"
             else:
-                return self.async_create_entry(title=f"VONETS {host}", data={CONF_HOST: host})
-        return self.async_show_form(step_id="user", data_schema=vol.Schema({vol.Required(CONF_HOST): str}), errors=errors)
+                if data.get("auth_failed") and user_input.get(CONF_PASSWORD):
+                    errors["base"] = "invalid_auth"
+                else:
+                    return self.async_create_entry(title=f"VONETS {host}", data={
+                        CONF_HOST: host, CONF_USERNAME: user_input.get(CONF_USERNAME, ""),
+                        CONF_PASSWORD: user_input.get(CONF_PASSWORD, "")})
+        return self.async_show_form(step_id="user", data_schema=vol.Schema({vol.Required(CONF_HOST): str, vol.Optional(CONF_USERNAME, default="admin"): str, vol.Optional(CONF_PASSWORD): str}), errors=errors)

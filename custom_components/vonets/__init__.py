@@ -4,12 +4,12 @@ from datetime import timedelta
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import fetch
+from .api import VonetsClient
 
 DOMAIN = "vonets"
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
@@ -20,10 +20,13 @@ class VonetsCoordinator(DataUpdateCoordinator[dict]):
         super().__init__(hass, __import__("logging").getLogger(__name__), config_entry=entry,
                          name=DOMAIN, update_interval=timedelta(seconds=60))
         self.host = entry.data[CONF_HOST]
+        # own session: the bridge login is cookie based and HA's shared session drops cookies
+        self.client = VonetsClient(async_create_clientsession(hass, cookie_jar=aiohttp.CookieJar(unsafe=True)),
+                                   self.host, entry.data.get(CONF_USERNAME, ""), entry.data.get(CONF_PASSWORD, ""))
 
     async def _async_update_data(self) -> dict:
         try:
-            return await fetch(async_get_clientsession(self.hass), self.host)
+            return await self.client.fetch()
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise UpdateFailed(f"{self.host}: {err}") from err
 

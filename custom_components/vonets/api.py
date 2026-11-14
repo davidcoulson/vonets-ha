@@ -27,15 +27,40 @@ def parse(link: str, signal: str, refresh: str) -> dict:
     }
 
 
-async def post(session: aiohttp.ClientSession, host: str, name: str) -> str:
-    async with session.post(f"http://{host}/goform/{name}", timeout=aiohttp.ClientTimeout(total=8)) as r:
-        r.raise_for_status()
-        return await r.text()
+class AuthRequired(Exception):
+    """The bridge answered with its login redirect."""
 
 
-async def fetch(session: aiohttp.ClientSession, host: str) -> dict:
-    return parse(
-        await post(session, host, "getApcliLinkSta"),
-        await post(session, host, "GetCurApcliSignal"),
-        await post(session, host, "SendStatusRefresh"),
-    )
+class VonetsClient:
+    """Link check is open; signal/status need the web login (cookie session)."""
+
+    def __init__(self, session: aiohttp.ClientSession, host: str, username: str = "", password: str = "") -> None:
+        self._s, self._host, self._user, self._pw = session, host, username, password
+
+    async def _post(self, name: str, data: dict | None = None) -> str:
+        async with self._s.post(f"http://{self._host}/goform/{name}", data=data,
+                                timeout=aiohttp.ClientTimeout(total=8)) as r:
+            r.raise_for_status()
+            return await r.text()
+
+    async def _login(self) -> None:
+        await self._post("login", {"username": self._user, "password": self._pw, "z999": "z999",
+                                   "platform": "pc", "Login": ""})
+
+    async def _authed(self, name: str) -> str:
+        text = await self._post(name)
+        if "a3.asp" in text:  # login redirect
+            if not self._pw:
+                raise AuthRequired
+            await self._login()
+            text = await self._post(name)
+            if "a3.asp" in text:
+                raise AuthRequired
+        return text
+
+    async def fetch(self) -> dict:
+        link = await self._post("getApcliLinkSta")
+        try:
+            return parse(link, await self._authed("GetCurApcliSignal"), await self._authed("SendStatusRefresh"))
+        except AuthRequired:
+            return {"linked": link.strip() == "1", "auth_failed": True}
