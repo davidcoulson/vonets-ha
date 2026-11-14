@@ -1,0 +1,10 @@
+{
+  "domain": "vonets",
+  "name": "VONETS WiFi Bridge",
+  "version": "0.1.0",
+  "config_flow": true,
+  "documentation": "https://www.vonets.com/",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "codeowners": []
+}
