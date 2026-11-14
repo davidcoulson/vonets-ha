@@ -4,12 +4,20 @@ from homeassistant.helpers.entity import EntityCategory
 
 from .entity import VonetsEntity
 
+
+def format_uptime(sec: int) -> str:
+    d, r = divmod(sec, 86400)
+    h, r = divmod(r, 3600)
+    m, s = divmod(r, 60)
+    return " ".join(f"{v}{u}" for v, u in ((d, "d"), (h, "h"), (m, "m"), (s, "s")) if v or u == "s")
+
 # key, name, device_class, unit, diagnostic?
 SENSORS = [
     ("signal_dbm", "Uplink signal", SensorDeviceClass.SIGNAL_STRENGTH, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, False),
     ("signal_pct", "Uplink signal quality", None, PERCENTAGE, True),
     ("temperature", "Temperature", SensorDeviceClass.TEMPERATURE, UnitOfTemperature.CELSIUS, False),
-    ("uptime", "Uptime", SensorDeviceClass.DURATION, UnitOfTime.SECONDS, False),
+    ("uptime_text", "Uptime", None, None, False),
+    ("uptime", "Uptime seconds", SensorDeviceClass.DURATION, UnitOfTime.SECONDS, True),
     ("channel", "Channel", None, None, True),
     ("bssid", "Connected AP", None, None, True),
     ("ssid", "SSID", None, None, True),
@@ -28,9 +36,13 @@ class VonetsSensor(VonetsEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         if diag:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
+            self._attr_entity_registry_enabled_default = key != "uptime"  # raw seconds hidden by default
         if unit is not None:
             self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self):
+        if self._key == "uptime_text":
+            up = self.coordinator.data.get("uptime")
+            return None if up is None else format_uptime(up)
         return self.coordinator.data.get(self._key)  # None (unknown) if the bridge login failed
