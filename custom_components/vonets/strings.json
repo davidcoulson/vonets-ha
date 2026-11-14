@@ -3,7 +3,46 @@
     "step": {
       "user": {
         "title": "VONETS WiFi bridge",
+        "description": "How do you want to add the bridge?",
+        "menu_options": {
+          "manual": "Enter the IP address",
+          "scan": "Scan a network range"
+        }
+      },
+      "manual": {
+        "title": "VONETS WiFi bridge",
         "description": "Enter the bridge's IP and its web admin login. Without a password only the uplink check works.",
+        "data": {
+          "host": "IP address",
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "scan": {
+        "title": "Scan for bridges",
+        "description": "Network range to scan, e.g. 192.168.1.0/24 (up to 1024 addresses).",
+        "data": {
+          "network": "Network range"
+        }
+      },
+      "pick": {
+        "title": "Bridges found",
+        "description": "Pick the bridge to add.",
+        "data": {
+          "host": "Bridge"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Bridge login rejected",
+        "description": "Enter the bridge's current web admin login.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure bridge",
+        "description": "Change the bridge's address or login.",
         "data": {
           "host": "IP address",
           "username": "Username",
@@ -13,10 +52,16 @@
     },
     "error": {
       "cannot_connect": "Could not read the bridge's status endpoints at that address.",
-      "invalid_auth": "The bridge rejected that username or password."
+      "invalid_auth": "The bridge rejected that username or password.",
+      "invalid_network": "That is not a valid network range.",
+      "network_too_big": "Use an IPv4 range of at most 1024 addresses.",
+      "none_found": "No new VONETS bridges answered in that range."
     },
     "abort": {
-      "already_configured": "That bridge is already set up."
+      "already_configured": "That bridge is already set up.",
+      "not_vonets": "That device is not a VONETS bridge.",
+      "reauth_successful": "Login updated.",
+      "reconfigure_successful": "Bridge updated."
     }
   }
 }

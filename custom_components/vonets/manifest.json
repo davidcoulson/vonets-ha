@@ -1,10 +1,17 @@
 {
   "domain": "vonets",
   "name": "VONETS WiFi Bridge",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "config_flow": true,
-  "documentation": "https://www.vonets.com/",
+  "documentation": "https://github.com/davidcoulson/vonets-ha",
   "iot_class": "local_polling",
   "requirements": [],
-  "codeowners": []
+  "codeowners": [],
+  "issue_tracker": "https://github.com/davidcoulson/vonets-ha/issues",
+  "integration_type": "device",
+  "dhcp": [
+    {
+      "macaddress": "001713*"
+    }
+  ]
 }

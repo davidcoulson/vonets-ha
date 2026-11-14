@@ -9,8 +9,8 @@ class VonetsEntity(CoordinatorEntity[VonetsCoordinator]):
 
     def __init__(self, coordinator: VonetsCoordinator, key: str) -> None:
         super().__init__(coordinator)
-        self._key = key
-        self._attr_unique_id = f"{coordinator.host}_{key}"
+        entry_id = coordinator.config_entry.entry_id
+        self._attr_unique_id = f"{entry_id}_{key}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.host)}, name=f"VONETS {coordinator.host}",
+            identifiers={(DOMAIN, entry_id)}, name=coordinator.config_entry.title,
             manufacturer="VONETS", model="VBG1200", configuration_url=f"http://{coordinator.host}/")

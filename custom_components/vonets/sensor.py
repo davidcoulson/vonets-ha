@@ -16,8 +16,8 @@ SENSORS = [
     ("signal_dbm", "Uplink signal", SensorDeviceClass.SIGNAL_STRENGTH, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, False),
     ("signal_pct", "Uplink signal quality", None, PERCENTAGE, True),
     ("temperature", "Temperature", SensorDeviceClass.TEMPERATURE, UnitOfTemperature.CELSIUS, False),
-    ("uptime_text", "Uptime", None, None, False),
-    ("uptime", "Uptime seconds", SensorDeviceClass.DURATION, UnitOfTime.SECONDS, True),
+    ("uptime", "Uptime", None, None, False),  # d/h/m/s text
+    ("uptime_seconds", "Uptime seconds", SensorDeviceClass.DURATION, UnitOfTime.SECONDS, True),
     ("channel", "Channel", None, None, True),
     ("bssid", "Connected AP", None, None, True),
     ("ssid", "SSID", None, None, True),
@@ -36,13 +36,13 @@ class VonetsSensor(VonetsEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         if diag:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
-            self._attr_entity_registry_enabled_default = key != "uptime"  # raw seconds hidden by default
+            self._attr_entity_registry_enabled_default = key != "uptime_seconds"  # raw seconds hidden by default
         if unit is not None:
             self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self):
-        if self._key == "uptime_text":
-            up = self.coordinator.data.get("uptime")
-            return None if up is None else format_uptime(up)
-        return self.coordinator.data.get(self._key)  # None (unknown) if the bridge login failed
+        data = self.coordinator.data
+        if self._key == "uptime":
+            return None if data.get("uptime") is None else format_uptime(data["uptime"])
+        return data.get("uptime" if self._key == "uptime_seconds" else self._key)  # None (unknown) if the bridge login failed
