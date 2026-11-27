@@ -2,9 +2,11 @@
 import asyncio
 import importlib
 import importlib.util
+import json
 import logging
 import sys
 from datetime import timedelta
+from pathlib import Path
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
@@ -12,6 +14,7 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platfor
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -60,6 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _register_reload_code(hass)
+    _clear_marketplace_restart(hass)
     return True
 
 
@@ -93,6 +97,26 @@ def _forget_code(hass: HomeAssistant, package: str, domain: str) -> None:
         for key in [n for n in cache if n == root or n.startswith(root + ".")]:
             del cache[key]
     importlib.invalidate_caches()  # or a file added since the last import may not be found
+
+
+_CODE_VERSION = json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
+
+
+def _clear_marketplace_restart(hass: HomeAssistant) -> None:
+    """Drop Marketplace's "restart to finish the update" repairs for Vonets.
+
+    Marketplace cannot see reload_code, so they would stay until a restart. Called from
+    entry setup, it uses the new code's version even when the old handler did the reload;
+    a repair for any other version still waits.
+    """
+    for (domain, issue_id), issue in list(ir.async_get(hass).issues.items()):
+        if (
+            domain == "marketplace"
+            and issue_id.startswith("restart_required_")
+            and issue.issue_domain == DOMAIN
+            and issue_id.rsplit("/", 1)[-1].removeprefix("v") == _CODE_VERSION
+        ):
+            ir.async_delete_issue(hass, domain, issue_id)
 
 
 def _register_reload_code(hass: HomeAssistant) -> None:

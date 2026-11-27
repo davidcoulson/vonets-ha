@@ -135,3 +135,47 @@ async def test_reload_code_replaces_the_modules(hass, aioclient_mock, entry):
         for name in [n for n in sys.modules if n == PACKAGE or n.startswith(PACKAGE + ".")]:
             del sys.modules[name]
         sys.modules.update(old)
+
+
+def test_marketplace_restart_cleanup_matches_only_the_running_version(hass, monkeypatch):
+    """Only Marketplace's restart repairs for this version of this integration are dropped."""
+    from homeassistant.helpers import issue_registry as ir
+
+    import custom_components.vonets as integration
+
+    monkeypatch.setattr(integration, "_CODE_VERSION", "1.2.3")
+    kept = {
+        ("marketplace", "restart_required_1_tags/1.2.4"),
+        ("marketplace", "restart_required_2_tags/1.2.3"),
+        ("marketplace", "critical_x"),
+        ("vonets", "restart_required_x"),
+    }
+    for domain, issue_id, issue_domain in (
+        ("marketplace", "restart_required_1_tags/1.2.3", "vonets"),
+        ("marketplace", "restart_required_1_tags/v1.2.3", "vonets"),
+        ("marketplace", "restart_required_1_tags/1.2.4", "vonets"),
+        ("marketplace", "restart_required_2_tags/1.2.3", "ssh"),
+        ("marketplace", "critical_x", "vonets"),
+        ("vonets", "restart_required_x", "vonets"),
+    ):
+        ir.async_create_issue(
+            hass,
+            domain,
+            issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="x",
+            issue_domain=issue_domain,
+        )
+    integration._clear_marketplace_restart(hass)
+    assert set(ir.async_get(hass).issues) == kept
+
+
+def test_code_version_is_the_manifest_version():
+    import json
+    from pathlib import Path
+
+    import custom_components.vonets as integration
+
+    manifest = Path(integration.__file__).parent / "manifest.json"
+    assert json.loads(manifest.read_text())["version"] == integration._CODE_VERSION
