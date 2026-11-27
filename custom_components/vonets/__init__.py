@@ -12,6 +12,7 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platfor
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -95,6 +96,16 @@ def _forget_code(hass: HomeAssistant, package: str, domain: str) -> None:
     importlib.invalidate_caches()  # or a file added since the last import may not be found
 
 
+def _clear_marketplace_restart(hass: HomeAssistant) -> None:
+    """Drop Marketplace's "restart to finish the update" repairs for Vonets.
+
+    Marketplace cannot see reload_code, so they would stay until a restart.
+    """
+    for (domain, issue_id), issue in list(ir.async_get(hass).issues.items()):
+        if domain == "marketplace" and issue_id.startswith("restart_required_") and issue.issue_domain == DOMAIN:
+            ir.async_delete_issue(hass, domain, issue_id)
+
+
 def _register_reload_code(hass: HomeAssistant) -> None:
     """Dev: vonets.reload_code loads the Python files from disk without a restart."""
 
@@ -116,5 +127,6 @@ def _register_reload_code(hass: HomeAssistant) -> None:
         failed = [e.title for e in entries if not await hass.config_entries.async_setup(e.entry_id)]
         if failed:
             raise HomeAssistantError(f"{DOMAIN} did not set up again for {failed}; see the log")
+        _clear_marketplace_restart(hass)
 
     async_register_admin_service(hass, DOMAIN, "reload_code", _reload_code)

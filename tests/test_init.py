@@ -135,3 +135,26 @@ async def test_reload_code_replaces_the_modules(hass, aioclient_mock, entry):
         for name in [n for n in sys.modules if n == PACKAGE or n.startswith(PACKAGE + ".")]:
             del sys.modules[name]
         sys.modules.update(old)
+
+
+def test_reload_clears_only_marketplaces_vonets_restart_repairs(hass):
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.vonets import _clear_marketplace_restart
+
+    for domain, issue_id, issue_domain in (
+        ("marketplace", "restart_required_1_tags/2026.11.27.2", "vonets"),
+        ("marketplace", "restart_required_2_tags/2026.11.26.01", "ssh"),
+        ("marketplace", "critical_x", "vonets"),
+        ("vonets", "restart_required_x", "vonets"),
+    ):
+        ir.async_create_issue(
+            hass, domain, issue_id, is_fixable=False, severity=ir.IssueSeverity.WARNING,
+            translation_key="x", issue_domain=issue_domain,
+        )
+    _clear_marketplace_restart(hass)
+    assert set(ir.async_get(hass).issues) == {
+        ("marketplace", "restart_required_2_tags/2026.11.26.01"),
+        ("marketplace", "critical_x"),
+        ("vonets", "restart_required_x"),
+    }
